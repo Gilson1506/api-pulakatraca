@@ -62,6 +62,7 @@ Após o deploy, seus endpoints estarão disponíveis em:
 - `https://seu-projeto.vercel.app/api/payments/generate-card-hash` - Gerar hash do cartão
 - `https://seu-projeto.vercel.app/api/payments/qr-image` - Proxy QR Code PIX
 - `https://seu-projeto.vercel.app/api/payments/pix-details` - Detalhes PIX
+- `https://seu-projeto.vercel.app/api/payments/webhook` - **Webhook do Pagar.me**
 
 ## 🛠️ Troubleshooting
 
@@ -76,6 +77,46 @@ Após o deploy, seus endpoints estarão disponíveis em:
 ### Timeout
 - Vercel tem timeout de 30 segundos
 - Para operações longas, use webhooks
+
+## 🔔 Configuração do Webhook
+
+### URL do Webhook:
+```
+https://api-pulakatraca-adfx.vercel.app/api/payments/webhook
+```
+
+### Como configurar no Pagar.me:
+1. Acesse o painel do Pagar.me
+2. Vá em "Configurações" > "Webhooks"
+3. Adicione a URL: `https://api-pulakatraca-adfx.vercel.app/api/payments/webhook`
+4. Selecione os eventos que deseja receber:
+   - `charge.paid` - Cobrança paga
+   - `charge.payment_failed` - Falha no pagamento da cobrança
+   - `charge.pending` - Cobrança pendente
+   - `order.canceled` - Pedido cancelado
+   - `order.closed` - Pedido fechado
+   - `order.created` - Pedido criado
+   - `order.paid` - Pedido pago
+   - `order.payment_failed` - Falha no pagamento do pedido
+   - `order.updated` - Pedido atualizado
+
+### Eventos Processados:
+
+#### 💸 **Eventos de Cobrança:**
+- ✅ **charge.paid** - Cobrança paga com sucesso
+- ❌ **charge.payment_failed** - Falha no pagamento da cobrança
+- ⏳ **charge.pending** - Cobrança pendente de confirmação
+
+#### 📦 **Eventos de Pedido:**
+- 🚫 **order.canceled** - Pedido cancelado
+- 🔒 **order.closed** - Pedido fechado
+- 📦 **order.created** - Pedido criado
+- ✅ **order.paid** - Pedido pago com sucesso
+- ❌ **order.payment_failed** - Falha no pagamento do pedido
+- 🔄 **order.updated** - Pedido atualizado
+
+### Logs do Webhook:
+Os webhooks são logados no console do Vercel para debug.
 
 ## 🎉 Pronto!
 

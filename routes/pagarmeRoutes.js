@@ -236,4 +236,259 @@ router.get('/pix-details', async (req, res) => {
   }
 });
 
+/**
+ * Webhook do Pagar.me para receber notificações de status de pagamento
+ * POST /api/payments/webhook
+ */
+router.post('/webhook', async (req, res) => {
+  try {
+    console.log('🔔 Webhook recebido:', JSON.stringify(req.body, null, 2));
+    
+    const { type, data } = req.body;
+    
+    // Validar se é um webhook válido do Pagar.me
+    if (!type || !data) {
+      console.log('❌ Webhook inválido: dados ausentes');
+      return res.status(400).json({ success: false, error: 'Dados do webhook inválidos' });
+    }
+
+    // Processar diferentes tipos de notificação
+    switch (type) {
+      // Eventos de Cobrança (Charge)
+      case 'charge.paid':
+        await handleChargePaid(data);
+        break;
+      case 'charge.payment_failed':
+        await handleChargePaymentFailed(data);
+        break;
+      case 'charge.pending':
+        await handleChargePending(data);
+        break;
+      
+      // Eventos de Pedido (Order)
+      case 'order.canceled':
+        await handleOrderCanceled(data);
+        break;
+      case 'order.closed':
+        await handleOrderClosed(data);
+        break;
+      case 'order.created':
+        await handleOrderCreated(data);
+        break;
+      case 'order.paid':
+        await handleOrderPaid(data);
+        break;
+      case 'order.payment_failed':
+        await handleOrderPaymentFailed(data);
+        break;
+      case 'order.updated':
+        await handleOrderUpdated(data);
+        break;
+      
+      // Eventos legados (manter compatibilidade)
+      case 'transaction.status_changed':
+        await handleTransactionStatusChange(data);
+        break;
+      case 'order.status_changed':
+        await handleOrderStatusChange(data);
+        break;
+      case 'charge.status_changed':
+        await handleChargeStatusChange(data);
+        break;
+      
+      default:
+        console.log(`ℹ️ Tipo de webhook não tratado: ${type}`);
+    }
+
+    // Sempre retornar 200 para o Pagar.me
+    return res.status(200).json({ success: true, message: 'Webhook processado' });
+
+  } catch (error) {
+    console.error('❌ Erro ao processar webhook:', error);
+    // Mesmo com erro, retornar 200 para evitar reenvios
+    return res.status(200).json({ success: false, error: 'Erro interno' });
+  }
+});
+
+/**
+ * Processar mudança de status de transação
+ */
+async function handleTransactionStatusChange(data) {
+  const { id, status, amount, payment_method } = data;
+  
+  console.log(`💳 Transação ${id} mudou para status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`💳 Método: ${payment_method}`);
+
+  // Aqui você pode implementar sua lógica de negócio
+  // Por exemplo: atualizar banco de dados, enviar email, etc.
+  
+  switch (status) {
+    case 'paid':
+      console.log('✅ Pagamento aprovado!');
+      // Implementar lógica para pagamento aprovado
+      break;
+    case 'pending':
+      console.log('⏳ Pagamento pendente...');
+      // Implementar lógica para pagamento pendente
+      break;
+    case 'failed':
+      console.log('❌ Pagamento falhou');
+      // Implementar lógica para pagamento falhado
+      break;
+    case 'canceled':
+      console.log('🚫 Pagamento cancelado');
+      // Implementar lógica para pagamento cancelado
+      break;
+  }
+}
+
+/**
+ * Processar mudança de status de pedido
+ */
+async function handleOrderStatusChange(data) {
+  const { id, status } = data;
+  console.log(`📦 Pedido ${id} mudou para status: ${status}`);
+  
+  // Implementar lógica específica para mudanças de pedido
+}
+
+/**
+ * Processar mudança de status de cobrança
+ */
+async function handleChargeStatusChange(data) {
+  const { id, status, payment_method } = data;
+  console.log(`💸 Cobrança ${id} mudou para status: ${status}`);
+  console.log(`💳 Método: ${payment_method}`);
+  
+  // Implementar lógica específica para mudanças de cobrança
+}
+
+// ===== EVENTOS ESPECÍFICOS DE COBRANÇA =====
+
+/**
+ * Cobrança paga
+ */
+async function handleChargePaid(data) {
+  const { id, amount, payment_method, customer } = data;
+  console.log(`✅ COBRANÇA PAGA! ID: ${id}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`💳 Método: ${payment_method}`);
+  console.log(`👤 Cliente: ${customer?.name || 'N/A'}`);
+  
+  // Implementar lógica para cobrança paga
+  // Ex: Ativar produto, enviar email de confirmação, etc.
+}
+
+/**
+ * Cobrança com falha no pagamento
+ */
+async function handleChargePaymentFailed(data) {
+  const { id, amount, payment_method, failure_reason } = data;
+  console.log(`❌ FALHA NO PAGAMENTO! ID: ${id}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`💳 Método: ${payment_method}`);
+  console.log(`🚫 Motivo: ${failure_reason || 'Não informado'}`);
+  
+  // Implementar lógica para falha no pagamento
+  // Ex: Notificar cliente, tentar outro método, etc.
+}
+
+/**
+ * Cobrança pendente
+ */
+async function handleChargePending(data) {
+  const { id, amount, payment_method } = data;
+  console.log(`⏳ COBRANÇA PENDENTE! ID: ${id}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`💳 Método: ${payment_method}`);
+  
+  // Implementar lógica para cobrança pendente
+  // Ex: Aguardar confirmação, notificar cliente, etc.
+}
+
+// ===== EVENTOS ESPECÍFICOS DE PEDIDO =====
+
+/**
+ * Pedido cancelado
+ */
+async function handleOrderCanceled(data) {
+  const { id, status, amount } = data;
+  console.log(`🚫 PEDIDO CANCELADO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  
+  // Implementar lógica para pedido cancelado
+  // Ex: Estornar estoque, notificar cliente, etc.
+}
+
+/**
+ * Pedido fechado
+ */
+async function handleOrderClosed(data) {
+  const { id, status, amount } = data;
+  console.log(`🔒 PEDIDO FECHADO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  
+  // Implementar lógica para pedido fechado
+  // Ex: Finalizar processamento, gerar relatório, etc.
+}
+
+/**
+ * Pedido criado
+ */
+async function handleOrderCreated(data) {
+  const { id, status, amount, customer } = data;
+  console.log(`📦 PEDIDO CRIADO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`👤 Cliente: ${customer?.name || 'N/A'}`);
+  
+  // Implementar lógica para pedido criado
+  // Ex: Reservar estoque, enviar confirmação, etc.
+}
+
+/**
+ * Pedido pago
+ */
+async function handleOrderPaid(data) {
+  const { id, status, amount, customer } = data;
+  console.log(`✅ PEDIDO PAGO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`👤 Cliente: ${customer?.name || 'N/A'}`);
+  
+  // Implementar lógica para pedido pago
+  // Ex: Processar envio, ativar serviço, etc.
+}
+
+/**
+ * Pedido com falha no pagamento
+ */
+async function handleOrderPaymentFailed(data) {
+  const { id, status, amount, failure_reason } = data;
+  console.log(`❌ FALHA NO PAGAMENTO DO PEDIDO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`🚫 Motivo: ${failure_reason || 'Não informado'}`);
+  
+  // Implementar lógica para falha no pagamento do pedido
+  // Ex: Liberar estoque, notificar cliente, etc.
+}
+
+/**
+ * Pedido atualizado
+ */
+async function handleOrderUpdated(data) {
+  const { id, status, amount, customer } = data;
+  console.log(`🔄 PEDIDO ATUALIZADO! ID: ${id}`);
+  console.log(`📦 Status: ${status}`);
+  console.log(`💰 Valor: R$ ${(amount / 100).toFixed(2)}`);
+  console.log(`👤 Cliente: ${customer?.name || 'N/A'}`);
+  
+  // Implementar lógica para pedido atualizado
+  // Ex: Sincronizar dados, notificar mudanças, etc.
+}
+
 export default router;
